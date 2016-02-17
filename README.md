@@ -1,2 +1,2 @@
 # JSZombie
-Simple Javascript Zombie controller
+Simple Javascript Zombie controller with Django
