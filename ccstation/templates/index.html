@@ -36,7 +36,8 @@ function ddos(){
 	var targ = $("#target").val()
 	$.ajax({
 		url:"{% url 'control-DDOS'%}",
-		type:'GET',
+		type:'POST',
+		dataType:"json",
 		data:{'targetip':targ}
 	});
 }

