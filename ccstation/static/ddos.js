@@ -28,8 +28,7 @@ function WS4Redis(e,n){"use strict";function o(e){try{console.log("Connecting to
 
           clearInterval(controller);
         }
-        //var curAtk = document.getElementById('currentAttack');
-        //curAtk.setAttribute("data-killattack",kill);
+        
 
 
 
