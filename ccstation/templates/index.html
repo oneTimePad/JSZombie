@@ -67,9 +67,10 @@ $(function(){
 
 function msghandler(json){
 
-	if(json.hasOwnProperty('newZombieId')){
+	json = JSON.parse(json);
+	if(json.hasOwnProperty('newzombieId') == true){
 
-		$("table[name='zombies']").append("<tr class='active' id="+json['newzombieId']+">"+json['newzombieHost']+"</tr>");
+		$("table[name='zombies']").append(	"<tr class='active'><td id="+json['newzombieId']+">"+json['newzombieHost']+"<span class ='glyphicon glyphicon-flash'></span></td></tr>");
 	}
 }
 
@@ -132,10 +133,14 @@ function drop(input){ $("."+input).toggle();}
 
 		<div class="zombies">
 				<h1 style="text-align: center;"><small>Zombies</small></h1>
-			<table class ="table table-condensed">
+			<table class ="table table-condensed" name="zombies">
+				<tbody>
 				{%for zombie in zombies%}
-				<tr id={{zombie.id}} class="active">{{zombie.host}}</tr>
+				<tr class="active">
+					<td id={{zombie.id}}>{{zombie.host}} <span class ="glyphicon glyphicon-flash"></span></td>
+				</tr>
 				{%endfor%}
+			</tbody>
 			</table>
 		</div>
 	</div>
