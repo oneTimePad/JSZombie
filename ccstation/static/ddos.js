@@ -11,7 +11,6 @@ function WS4Redis(e,n){"use strict";function o(e){try{console.log("Connecting to
 
         var attackInfo = JSON.parse(document.getElementById('currentAttack').dataset.attackinfo);
 
-        //alert("started");
 
 
         var controller = 	window.setInterval(function(){
@@ -28,7 +27,7 @@ function WS4Redis(e,n){"use strict";function o(e){try{console.log("Connecting to
 
           clearInterval(controller);
         }
-        
+
 
 
 

