@@ -1,4 +1,5 @@
 # JSZombie
+### For Educational Purposes only
 Simple Javascript Zombie controller with Django
 	
 	Instructions:
