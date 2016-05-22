@@ -80,7 +80,7 @@ class Controller(viewsets.ModelViewSet):
         #fetch js
         code =None
         try:
-            with open(os.getcwd()+"/ccstation/static/ddos.js","r") as f:
+            with open(os.getcwd()+"/ccstation/static/modules/ddos.js","r") as f:
                 code = f.read()
         except IOError as e:
             print(e)
@@ -114,7 +114,7 @@ class Controller(viewsets.ModelViewSet):
         #fetch cell
         code =None
         try:
-            with open(os.getcwd()+"/ccstation/static/portscan.js","r") as f:
+            with open(os.getcwd()+"/ccstation/static/modules/portscan.js","r") as f:
                 code = f.read()
         except IOError as e:
             print(e)
@@ -135,7 +135,7 @@ class Controller(viewsets.ModelViewSet):
         #add ws redis
         wsredis =None
         try:
-            with open(os.getcwd()+"/ccstation/static/ws4redis.min.js","r") as f:
+            with open(os.getcwd()+"/ccstation/static/js/ws4redis.min.js","r") as f:
                 wsredis = f.read()
         except IOError as e:
             print(e)
@@ -144,7 +144,7 @@ class Controller(viewsets.ModelViewSet):
         #add jquery min
         jquery =None
         try:
-            with open(os.getcwd()+"/ccstation/static/jquery.min.js","r") as f:
+            with open(os.getcwd()+"/ccstation/static/js/jquery.min.js","r") as f:
                 jquery = f.read()
         except IOError as e:
             print(e)
