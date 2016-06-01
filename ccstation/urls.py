@@ -10,6 +10,3 @@ urlpatterns=[
 router = SimpleRouter(trailing_slash=False)
 router.register(r'control',Controller,'control')
 urlpatterns+=router.urls
-router = SimpleRouter(trailing_slash=False)
-router.register(r'zombie',ZombieInterface,'zombie')
-urlpatterns+=router.urls

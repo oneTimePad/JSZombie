@@ -1,6 +1,13 @@
-
+/**
+ * options.uri - > The Websocket URI
+ * options.connected -> Callback called after the websocket is connected.
+ * options.connecting -> Callback called when the websocket is connecting.
+ * options.disconnected -> Callback called after the websocket is disconnected.
+ * options.receive_message -> Callback called when a message is received from the websocket.
+ * options.heartbeat_msg -> String to identify the heartbeat message.
+ * $ -> JQuery instance.
+ */
 function WS4Redis(options, $) {
-	console.log("HERE");
 	'use strict';
 	var opts, ws, deferred, timer, attempts = 1, must_reconnect = true;
 	var heartbeat_interval = null, missed_heartbeats = 0;
@@ -17,15 +24,15 @@ function WS4Redis(options, $) {
 	function connect(uri) {
 		try {
 			if (ws && (is_connecting() || is_connected())) {
-				//console.log("Websocket is connecting or already connected.");
+				console.log("Websocket is connecting or already connected.");
 				return;
 			}
-
+			
 			if ($.type(opts.connecting) === 'function') {
 				opts.connecting();
 			}
-
-//			console.log("Connecting to " + uri + " ...");
+			
+			console.log("Connecting to " + uri + " ...");
 			deferred = $.Deferred();
 			ws = new WebSocket(uri);
 			ws.onopen = on_open;
@@ -42,7 +49,7 @@ function WS4Redis(options, $) {
 	function try_to_reconnect() {
 		if (must_reconnect && !timer) {
 			// try to reconnect
-	//		console.log('Reconnecting...');
+			console.log('Reconnecting...');
 			var interval = generate_inteval(attempts);
 			timer = setTimeout(function() {
 				attempts++;
@@ -50,27 +57,25 @@ function WS4Redis(options, $) {
 			}, interval);
 		}
 	}
-
+	
 	function send_heartbeat() {
 		try {
 			missed_heartbeats++;
 			if (missed_heartbeats > 3)
 				throw new Error("Too many missed heartbeats.");
-			//ws.send(opts.heartbeat_msg);
+			ws.send(opts.heartbeat_msg);
 		} catch(e) {
 			clearInterval(heartbeat_interval);
 			heartbeat_interval = null;
-//			console.warn("Closing connection. Reason: " + e.message);
+			console.warn("Closing connection. Reason: " + e.message);
 			if ( !is_closing() && !is_closed() ) {
 				ws.close();
 			}
 		}
 	}
 
-
-
 	function on_open() {
-//		console.log('Connected!');
+		console.log('Connected!');
 		// new connection, reset attemps counter
 		attempts = 1;
 		deferred.resolve();
@@ -84,7 +89,7 @@ function WS4Redis(options, $) {
 	}
 
 	function on_close(evt) {
-//		console.log("Connection closed!");
+		console.log("Connection closed!");
 		if ($.type(opts.disconnected) === 'function') {
 			opts.disconnected(evt);
 		}
@@ -92,7 +97,7 @@ function WS4Redis(options, $) {
 	}
 
 	function on_error(evt) {
-	//	console.error("Websocket connection is broken!");
+		console.error("Websocket connection is broken!");
 		deferred.reject(new Error(evt));
 	}
 
@@ -125,28 +130,28 @@ function WS4Redis(options, $) {
 	this.send_message = function(message) {
 		ws.send(message);
 	};
-
+	
 	this.get_state = function() {
-		return ws.readyState;
+		return ws.readyState;	
 	};
-
+	
 	function is_connecting() {
-		return ws && ws.readyState === 0;
+		return ws && ws.readyState === 0;	
 	}
-
+	
 	function is_connected() {
-		return ws && ws.readyState === 1;
+		return ws && ws.readyState === 1;	
 	}
-
+	
 	function is_closing() {
-		return ws && ws.readyState === 2;
+		return ws && ws.readyState === 2;	
 	}
 
 	function is_closed() {
-		return ws && ws.readyState === 3;
+		return ws && ws.readyState === 3;	
 	}
-
-
+	
+	
 	this.close = function () {
 		clearInterval(heartbeat_interval);
 		must_reconnect = false;
@@ -154,8 +159,8 @@ function WS4Redis(options, $) {
 			ws.close();
 		}
 	}
-
-	this.is_connecting = is_connecting;
+	
+	this.is_connecting = is_connecting; 
 	this.is_connected = is_connected;
 	this.is_closing = is_closing;
 	this.is_closed = is_closed;

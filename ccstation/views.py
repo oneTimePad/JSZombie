@@ -14,9 +14,9 @@ from rest_framework.response import Response
 from rest_framework.decorators import list_route
 import pdb
 import simplejson
+from django.views.decorators.cache import never_cache
 from django.http import HttpResponse
 import os
-
 
 
 class IndexPage(View,TemplateResponseMixin,ContextMixin):
@@ -26,7 +26,9 @@ class IndexPage(View,TemplateResponseMixin,ContextMixin):
             context = super(IndexPage,self).get_context_data(**kwargs)
             context['zombies'] = Zombie.objects.all()
             return context
+        @never_cache
         def get(self,request):
+            pdb.set_trace()
             #create attacker sesssion and model object if doesn't exist
             if not request.session.exists(request.session.session_key):
                     request.session.create()
@@ -35,38 +37,6 @@ class IndexPage(View,TemplateResponseMixin,ContextMixin):
                 Attacker.objects.get_or_create(sesskey=request.session.session_key)
             return self.render_to_response(self.get_context_data())
 
-
-
-class ZombieInterface(viewsets.ModelViewSet):
-
-    #zombie attempts to register with controller
-    @list_route(methods=['get'])
-    def register(self,request,pk=None):
-        #pdb.set_trace()
-        #check if zombie exists
-        try:
-            zom = Zombie.objects.get(host=request.META['REMOTE_ADDR'])
-        except Zombie.DoesNotExist:
-            newZombie = Zombie.objects.create(host=request.META['REMOTE_ADDR'])
-            #tell attacker new zombie added
-            redis_publisher = RedisPublisher(facility='attacker',sessions=[ atkr.sesskey for atkr in Attacker.objects.all()])
-            redis_publisher.publish_message(RedisMessage(simplejson.dumps({'new':'new','newzombieId':newZombie.pk,'newzombieHost':newZombie.host})))
-        #check if session exits
-        if not request.session.exists(request.session.session_key):
-            request.session.create()
-        #add zombie to list
-        zom = Zombie.objects.get(host=request.META['HTTP_HOST'])
-        zom.sesskey = request.session.session_key
-        zom.save()
-
-        return Response()
-    #zombie updates controller with information
-    @list_route(methods=['get'])
-    def updateAttacker(self,request,pk=None):
-        redis_publisher = RedisPublisher(facility='attacker',sessions=[ atkr.sesskey for atkr in Attacker.objects.all()])
-        redis_publisher.publish_message(RedisMessage(simplejson.dumps({'data':request.GET['host']})))
-
-        return HttpResponse()
 
 class Controller(viewsets.ModelViewSet):
 
