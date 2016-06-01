@@ -8,6 +8,7 @@ from django.core.handlers.wsgi import logger
 from ws4redis.utf8validator import Utf8Validator
 from ws4redis.exceptions import WebSocketError, FrameTooLargeException
 from .zombie import ZombieWebsocket,ZombieMessage
+from xsscc import settings
 import pdb
 if six.PY3:
     xrange = range
@@ -212,17 +213,20 @@ class WebSocket(object):
         if self._closed:
             raise WebSocketError("Connection is already closed")
         try:
-
             message= self.read_message()
             #deal with zombie messages
-            msg = ZombieMessage(message,clientip)
+            try:
+                msg = ZombieMessage(message,clientip)
 
-            if msg.get()['heartbeat'] == settings.WS4REDIS_HEARTBEAT:
-                message = settings.WS4REDIS_HEARTBEAT
-                ZombieWebsocket().heartbeat(msg)
-            elif msg.get()['endpoint'] == "register":
-                ZombieWebsocket().register(msg)
-            elif msg.get()['endpoint'] == "update":
+                if 'heartbeat' in msg.get():
+                    message = settings.WS4REDIS_HEARTBEAT
+                    ZombieWebsocket().heartbeat(msg)
+                elif 'endpoint' in msg.get():
+                    if msg.get()['endpoint'] == "register":
+                      ZombieWebsocket().register(msg)
+                    elif msg.get()['endpoint'] == "update":
+                      ZombieWebsocket().update(msg)
+            except Exception:
                 pass
 
             return message
@@ -233,6 +237,7 @@ class WebSocket(object):
             logger.info('websocket.receive: WebSocketError {}'.format(e))
             self.close(1002)
         except Exception as e:
+            pdb.set_trace()
             logger.info('websocket.receive: Unknown error {}'.format(e))
             raise e
 

