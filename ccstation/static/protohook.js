@@ -27,9 +27,9 @@ function JSZombie(ip,handler){
 		//stop code execution
 		function kill(){
 				Promise.resolve(this.killfct).then(function(fct){
-					console.log(fct);
 					fct();
 				});
+
 		}
 		this.execute = execute;
 		this.kill = kill;
